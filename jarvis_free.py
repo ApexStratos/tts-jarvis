@@ -1,11 +1,26 @@
-import os
 import speech_recognition as sr
 import ollama
-from gtts import gTTS
-import pygame
+import pyttsx3
 
-# Initialize Pygame audio mixer
-pygame.mixer.init()
+# Initialize the local text-to-speech engine
+engine = pyttsx3.init()
+
+# Optional: Customize voice rate (speed) and volume
+engine.setProperty('rate', 175)  # Speed of speech
+engine.setProperty('volume', 1.0)  # Volume (0.0 to 1.0)
+
+# Optional: Select a specific voice if available (Mac usually has 'Alex' or 'Victoria', etc.)
+voices = engine.getProperty('voices')
+for voice in voices:
+    if "en_US" in voice.id or "Alex" in voice.id:
+        engine.setProperty('voice', voice.id)
+        break
+
+def speak(text):
+    """Converts text to speech locally and offline using Mac's speech synthesis."""
+    print(f"\n[Jarvis speaks]: {text}")
+    engine.say(text)
+    engine.runAndWait()
 
 # Define Jarvis's persona
 SYSTEM_PROMPT = (
@@ -14,25 +29,6 @@ SYSTEM_PROMPT = (
 )
 
 conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
-
-def speak(text):
-    """Converts text to speech and plays it aloud locally for free."""
-    print(f"\n[Jarvis speaks]: {text}")
-    try:
-        tts = gTTS(text=text, lang="en", tld="com")
-        temp_file = "jarvis_temp_audio.mp3"
-        tts.save(temp_file)
-
-        pygame.mixer.music.load(temp_file)
-        pygame.mixer.music.play()
-
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
-
-        pygame.mixer.music.unload()
-        os.remove(temp_file)
-    except Exception as e:
-        print(f"[Audio Error]: {e}")
 
 def listen_to_mic():
     """Listens to the microphone and converts speech to text locally."""
