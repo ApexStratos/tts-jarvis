@@ -1,37 +1,58 @@
+import os
+import subprocess
 import speech_recognition as sr
 import ollama
 import pyttsx3
 
-# Initialize the local text-to-speech engine
+# Initialize TTS Engine
 engine = pyttsx3.init()
-
-# Optional: Customize voice rate (speed) and volume
-engine.setProperty('rate', 175)  # Speed of speech
-engine.setProperty('volume', 1.0)  # Volume (0.0 to 1.0)
-
-# Optional: Select a specific voice if available (Mac usually has 'Alex' or 'Victoria', etc.)
-voices = engine.getProperty('voices')
-for voice in voices:
-    if "en_US" in voice.id or "Alex" in voice.id:
-        engine.setProperty('voice', voice.id)
-        break
+engine.setProperty('rate', 175)
+engine.setProperty('volume', 1.0)
 
 def speak(text):
-    """Converts text to speech locally and offline using Mac's speech synthesis."""
     print(f"\n[Jarvis speaks]: {text}")
     engine.say(text)
     engine.runAndWait()
 
-# Define Jarvis's persona
+# --- CLAUDE-LIKE TOOLS ---
+def run_terminal_command(command):
+    """Executes a shell command on your Mac and returns the output."""
+    print(f"\n[Jarvis Tool]: Executing command -> {command}")
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return result.stdout.strip()
+        else:
+            return f"Error: {result.stderr.strip()}"
+    except Exception as e:
+        return f"Failed to execute command: {e}"
+
+def read_local_file(filepath):
+    """Reads a local file's content."""
+    print(f"\n[Jarvis Tool]: Reading file -> {filepath}")
+    try:
+        with open(filepath, 'r') as f:
+            return f.read()
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+# Map tool names to actual functions
+available_tools = {
+    'run_terminal_command': run_terminal_command,
+    'read_local_file': read_local_file
+}
+
+# System prompt defining Claude-like assistant behavior and tool access
 SYSTEM_PROMPT = (
-    "You are Jarvis, an advanced, highly intelligent, and slightly sarcastic AI assistant "
-    "inspired by Tony Stark's system. Keep your answers concise, witty, and optimized for a terminal interface."
+    "You are Jarvis, an advanced local AI assistant with capabilities similar to Claude. "
+    "You are helpful, precise, and capable of executing actions. "
+    "If the user asks you to run a terminal command, check files, or perform local actions, "
+    "you can use your tools. Keep responses concise for a terminal interface."
 )
 
 conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
 
 def listen_to_mic():
-    """Listens to the microphone and converts speech to text locally."""
     r = sr.Recognizer()
     with sr.Microphone() as source:
         print("\n[Listening... Speak now]")
@@ -42,21 +63,18 @@ def listen_to_mic():
             text = r.recognize_google(audio)
             print(f"You (Voice): {text}")
             return text
-        except sr.WaitTimeoutError:
-            print("[Listening timed out]")
-            return None
-        except sr.UnknownValueError:
-            print("[Could not understand audio]")
-            return None
-        except Exception as e:
-            print(f"[Mic Error]: {e}")
+        except Exception:
+            print("[Could not understand audio or timed out]")
             return None
 
 def ask_local_jarvis(user_input):
-    """Sends input to your local Ollama model (llama3) for free token processing."""
     conversation_history.append({"role": "user", "content": user_input})
     try:
-        response = ollama.chat(model='llama3', messages=conversation_history)
+        # Using qwen2.5-coder for high-tier local reasoning & coding capability
+        response = ollama.chat(
+            model='qwen2.5-coder:7b', 
+            messages=conversation_history
+        )
         reply = response['message']['content']
         conversation_history.append({"role": "assistant", "content": reply})
         return reply
@@ -65,9 +83,9 @@ def ask_local_jarvis(user_input):
 
 def main():
     print("=" * 50)
-    print(" FREE LOCAL JARVIS TERMINAL ONLINE")
+    print(" CLAUDE-POWERED LOCAL JARVIS ONLINE")
     print("=" * 50)
-    speak("Jarvis online. Systems nominal. Local processing active. How may I assist you today, sir?")
+    speak("Jarvis online. Systems nominal. Advanced capabilities active. How may I assist you, sir?")
 
     while True:
         print("\nOptions:")
@@ -88,7 +106,7 @@ def main():
             speak("Powering down, sir. Goodbye.")
             break
         else:
-            print("Invalid selection. Please choose 't', 'v', or 'q'.")
+            print("Invalid selection.")
             continue
 
         if user_input:
